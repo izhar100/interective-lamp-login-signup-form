@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina — Interactive Lamp Authentication</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --theme-primary: #f59e0b;
+            --theme-secondary: #fbbf24;
+            --theme-rgb: 245, 158, 11;
+            --theme-glow: rgba(245, 158, 11, 0.45);
+            --theme-soft: rgba(245, 158, 11, 0.14);
+            --lamp-on: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        input {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #07090e;
+            color: #f8fafc;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Ambient Room Background Glow */
+        .room-ambient {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            opacity: var(--lamp-on);
+            transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), background 0.5s ease;
+            background: 
+                radial-gradient(circle 750px at 26% 32%, rgba(var(--theme-rgb), 0.18), transparent 70%),
+                radial-gradient(circle 900px at 65% 55%, rgba(var(--theme-rgb), 0.09), transparent 75%);
+        }
+
+        /* Subtle Floor Grid & Perspective */
+        .room-grid {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(circle at 40% 45%, black 20%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at 40% 45%, black 20%, transparent 80%);
+        }
+
+        /* Volumetric Lamp Light Cone */
+        .light-beam-paths {
+            opacity: var(--lamp-on);
+            transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+            mix-blend-mode: screen;
+            pointer-events: none;
+        }
+
+        /* Lamp Bulb Glow */
+        .bulb-glow {
+            opacity: var(--lamp-on);
+            transition: opacity 0.35s ease, fill 0.4s ease, filter 0.4s ease;
+        }
+
+        /* Form Card Reveal & Glassmorphism */
+        .auth-card-wrapper {
+            transition: all 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+            opacity: 0;
+            transform: translateY(28px) scale(0.96);
+            pointer-events: none;
+            filter: blur(10px);
+        }
+
+        body.lamp-is-on .auth-card-wrapper {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+            filter: blur(0px);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(17, 23, 36, 0.78) 0%, rgba(11, 15, 25, 0.88) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(var(--theme-rgb), 0.28);
+            box-shadow: 
+                0 25px 60px -15px rgba(0, 0, 0, 0.85),
+                0 0 50px -10px rgba(var(--theme-rgb), 0.22),
+                inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        /* Sleeping State Prompt when Lamp is Off */
+        .dark-room-hint {
+            transition: all 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        body.lamp-is-on .dark-room-hint {
+            opacity: 0;
+            transform: translateY(-16px) scale(0.95);
+            pointer-events: none;
+        }
+
+        /* Interactive Input Styling */
+        .theme-input {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            transition: all 0.25s ease;
+        }
+
+        .theme-input:focus {
+            outline: none;
+            border-color: var(--theme-primary);
+            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 0 4px rgba(var(--theme-rgb), 0.15), 0 0 20px -4px rgba(var(--theme-rgb), 0.3);
+        }
+
+        /* Theme Primary Button */
+        .theme-btn {
+            background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
+            box-shadow: 0 10px 25px -5px rgba(var(--theme-rgb), 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .theme-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px -6px rgba(var(--theme-rgb), 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+        }
+
+        .theme-btn:active {
+            transform: translateY(1px) scale(0.99);
+        }
+
+        /* Theme Swatch Selector */
+        .theme-swatch {
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .theme-swatch:hover {
+            transform: scale(1.15);
+        }
+
+        .theme-swatch.active {
+            transform: scale(1.18);
+            box-shadow: 0 0 0 2px #090d16, 0 0 0 4px var(--swatch-color), 0 0 16px var(--swatch-color);
+        }
+
+        /* Floating Dust Particles inside Light Cone */
+        @keyframes floatParticle {
+            0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.2; }
+            50% { transform: translateY(-18px) translateX(8px); opacity: 0.75; }
+        }
+
+        .dust-mote {
+            animation: floatParticle 4s ease-in-out infinite;
+        }
+
+        /* Pull Handle Cursor & Pulse */
+        .cord-grab-area {
+            cursor: grab;
+        }
+        .cord-grab-area:active {
+            cursor: grabbing;
+        }
+
+        @keyframes pulseRing {
+            0% { r: 9; opacity: 0.75; }
+            100% { r: 24; opacity: 0; }
+        }
+        .handle-pulse {
+            animation: pulseRing 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+
+        /* Custom Checkbox */
+        .custom-checkbox:checked {
+            background-color: var(--theme-primary);
+            border-color: var(--theme-primary);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex flex-col justify-between relative selection:bg-amber-500/30 selection:text-white">
+
+    <!-- Background Room Grids & Dynamic Ambient Illumination -->
+    <div class="room-grid"></div>
+    <div class="room-ambient"></div>
+
+    <!-- Top Navigation Bar & 5 Color Theme Selector -->
+    <header class="relative z-30 w-full max-w-7xl mx-auto px-4 sm:px-8 pt-5 pb-2 flex flex-wrap items-center justify-between gap-4">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-900/90 border border-slate-800 shadow-lg relative overflow-hidden group">
+                <div class="absolute inset-0 opacity-30 transition-opacity duration-500" style="background: radial-gradient(circle at center, var(--theme-primary), transparent 75%);"></div>
+                <i data-lucide="lamp-desk" class="w-5 h-5 transition-colors duration-300" style="color: var(--theme-primary);"></i>
+            </div>
+            <div>
+                <span class="brand-font font-bold text-lg tracking-tight text-white flex items-center gap-2">
+                    LUMINA
+                    <span id="status-badge" class="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-400 border border-slate-700/60 transition-all duration-300">
+                        Lamp Off
+                    </span>
+                </span>
+                <p class="text-xs text-slate-400 hidden sm:block">Interactive Ambient Authentication</p>
+            </div>
+        </div>
+
+        <!-- Right-Up Corner: 5 Curated Color Theme Options -->
+        <div class="flex items-center gap-3 bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 px-3.5 py-2 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-1.5 pr-2 border-r border-slate-800">
+                <i data-lucide="palette" class="w-4 h-4 text-slate-400"></i>
+                <span id="theme-name-label" class="text-xs font-medium text-slate-300 hidden md:inline-block min-w-[110px]">
+                    Amber Gold
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2.5" role="radiogroup" aria-label="Lamp Color Themes">
+                <!-- 1. Warm Amber Gold -->
+                <button type="button" onclick="selectTheme(0)" data-theme-index="0"
+                    class="theme-swatch active w-6 h-6 rounded-full focus:outline-none"
+                    style="--swatch-color: #f59e0b; background: linear-gradient(135deg, #fbbf24, #d97706);"
+                    title="Warm Amber Gold" aria-label="Warm Amber Gold Theme"></button>
+
+                <!-- 2. Cyber Neon Cyan -->
+                <button type="button" onclick="selectTheme(1)" data-theme-index="1"
+                    class="theme-swatch w-6 h-6 rounded-full focus:outline-none"
+                    style="--swatch-color: #06b6d4; background: linear-gradient(135deg, #22d3ee, #0891b2);"
+                    title="Cyber Neon Cyan" aria-label="Cyber Neon Cyan Theme"></button>
+
+                <!-- 3. Royal Amethyst Purple -->
+                <button type="button" onclick="selectTheme(2)" data-theme-index="2"
+                    class="theme-swatch w-6 h-6 rounded-full focus:outline-none"
+                    style="--swatch-color: #a855f7; background: linear-gradient(135deg, #c084fc, #7e22ce);"
+                    title="Royal Amethyst Purple" aria-label="Royal Amethyst Purple Theme"></button>
+
+                <!-- 4. Emerald Mint -->
+                <button type="button" onclick="selectTheme(3)" data-theme-index="3"
+                    class="theme-swatch w-6 h-6 rounded-full focus:outline-none"
+                    style="--swatch-color: #10b981; background: linear-gradient(135deg, #34d399, #059669);"
+                    title="Emerald Mint" aria-label="Emerald Mint Theme"></button>
+
+                <!-- 5. Rose Sunset -->
+                <button type="button" onclick="selectTheme(4)" data-theme-index="4"
+                    class="theme-swatch w-6 h-6 rounded-full focus:outline-none"
+                    style="--swatch-color: #f43f5e; background: linear-gradient(135deg, #fb7185, #e11d48);"
+                    title="Rose Sunset" aria-label="Rose Sunset Theme"></button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Split Interactive Stage -->
+    <main class="relative z-20 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12">
+        
+        <!-- LEFT SIDE: Interactive Designer Lamp with Physics Pull-Cord -->
+        <div class="w-full lg:w-5/12 flex flex-col items-center justify-center relative select-none">
+            
+            <!-- SVG Lamp & Volumetric Light Stage -->
+            <div class="relative w-full max-w-[440px] aspect-[4/4.3] flex items-center justify-center">
+                <svg id="lamp-svg" viewBox="0 0 500 540" class="w-full h-full overflow-visible">
+                    <defs>
+                        <!-- Primary Volumetric Light Cone Gradient -->
+                        <linearGradient id="beam-gradient" x1="210" y1="175" x2="290" y2="510" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" id="beam-stop-1" stop-color="#f59e0b" stop-opacity="0.55" />
+                            <stop offset="45%" id="beam-stop-2" stop-color="#f59e0b" stop-opacity="0.20" />
+                            <stop offset="100%" id="beam-stop-3" stop-color="#f59e0b" stop-opacity="0" />
+                        </linearGradient>
+
+                        <!-- Wide Ambient Spill Gradient toward the Right Form -->
+                        <linearGradient id="side-spill-gradient" x1="210" y1="180" x2="680" y2="390" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" id="spill-stop-1" stop-color="#f59e0b" stop-opacity="0.32" />
+                            <stop offset="60%" id="spill-stop-2" stop-color="#f59e0b" stop-opacity="0.08" />
+                            <stop offset="100%" id="spill-stop-3" stop-color="#f59e0b" stop-opacity="0" />
+                        </linearGradient>
+
+                        <!-- Inner Lamp Shade Warm Reflection -->
+                        <linearGradient id="inner-shade-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" id="shade-stop-1" stop-color="#ffffff" stop-opacity="0.9" />
+                            <stop offset="100%" id="shade-stop-2" stop-color="#f59e0b" stop-opacity="0.85" />
+                        </linearGradient>
+
+                        <!-- Metallic Lamp Shade Outer Body Gradient -->
+                        <linearGradient id="shade-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#334155" />
+                            <stop offset="50%" stop-color="#1e293b" />
+                            <stop offset="100%" stop-color="#0f172a" />
+                        </linearGradient>
+
+                        <!-- Stand Stem Metallic Gradient -->
+                        <linearGradient id="stand-metal" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#475569" />
+                            <stop offset="50%" stop-color="#1e293b" />
+                            <stop offset="100%" stop-color="#0f172a" />
+                        </linearGradient>
+
+                        <!-- Soft Glow Filter -->
+                        <filter id="glow-blur" x="-40%" y="-40%" width="180%" height="180%">
+                            <feGaussianBlur stdDeviation="18" result="blur" />
+                        </filter>
+
+                        <filter id="intense-bulb-blur" x="-100%" y="-100%" width="300%" height="300%">
+                            <feGaussianBlur stdDeviation="25" />
+                        </filter>
+                    </defs>
+
+                    <!-- FLOOR SURFACE SHADOW -->
+                    <ellipse cx="195" cy="490" rx="145" ry="18" fill="rgba(0,0,0,0.65)" />
+
+                    <!-- FLOOR LIGHT POOL (Illuminates when Lamp is ON) -->
+                    <ellipse id="floor-light-pool" class="light-beam-paths" cx="255" cy="490" rx="185" ry="26" fill="var(--theme-primary)" opacity="0.35" filter="url(#glow-blur)" />
+
+                    <!-- VOLUMETRIC LIGHT CONE & SIDE BEAM -->
+                    <g class="light-beam-paths">
+                        <!-- Wide Side Projection illuminating the Login Card -->
+                        <polygon points="145,182 285,182 780,520 55,520" fill="url(#side-spill-gradient)" filter="url(#glow-blur)" />
+                        <!-- Focused Downward Volumetric Cone -->
+                        <polygon points="142,182 288,182 435,500 55,500" fill="url(#beam-gradient)" />
+
+                        <!-- Floating Illuminated Dust Motes inside Light Cone -->
+                        <circle class="dust-mote" cx="220" cy="250" r="2" fill="#fff" style="animation-delay: 0s;" />
+                        <circle class="dust-mote" cx="275" cy="295" r="1.5" fill="#fff" style="animation-delay: 1.1s;" />
+                        <circle class="dust-mote" cx="185" cy="330" r="2.2" fill="#fff" style="animation-delay: 2.3s;" />
+                        <circle class="dust-mote" cx="290" cy="235" r="1.8" fill="#fff" style="animation-delay: 0.7s;" />
+                        <circle class="dust-mote" cx="245" cy="370" r="1.4" fill="#fff" style="animation-delay: 1.8s;" />
+                        <circle class="dust-mote" cx="330" cy="340" r="2.0" fill="#fff" style="animation-delay: 2.9s;" />
+                    </g>
+
+                    <!-- LAMP BASE & ARCHITECTURAL CURVED NECK -->
+                    <!-- Weighted Base -->
+                    <path d="M 105 490 C 105 473, 225 473, 225 490 Z" fill="url(#shade-metal)" stroke="#475569" stroke-width="1" />
+                    <rect x="100" y="488" width="130" height="7" rx="3.5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+
+                    <!-- Main Vertical Stem & Gooseneck Arch -->
+                    <path d="M 165 480 L 165 135 C 165 65, 215 65, 215 102" 
+                          fill="none" stroke="url(#stand-metal)" stroke-width="12" stroke-linecap="round" />
+                    <!-- Subtle Highlight on Stem -->
+                    <path d="M 162 478 L 162 135 C 162 70, 212 70, 212 102" 
+                          fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-linecap="round" />
+
+                    <!-- Brass/Accent Joint Collar -->
+                    <rect x="157" y="395" width="16" height="10" rx="3" fill="#334155" stroke="#64748b" stroke-width="1" />
+                    <rect x="206" y="96" width="18" height="12" rx="3" fill="#334155" stroke="#64748b" stroke-width="1" />
+
+                    <!-- INTERACTIVE PULL CORD & TASSEL (Behind/Under Shade Rim) -->
+                    <g id="pull-cord-group">
+                        <!-- Cord Socket Eyelet -->
+                        <circle cx="258" cy="176" r="4" fill="#475569" />
+                        
+                        <!-- Dynamic Physics Rope Path -->
+                        <path id="cord-line" d="M 258 176 Q 258 235 258 292" 
+                              fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="3 2" stroke-linecap="round" />
+
+                        <!-- Beaded Chain Overlay for Tactile Realism -->
+                        <path id="cord-core" d="M 258 176 Q 258 235 258 292" 
+                              fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+
+                        <!-- Interactive Pull Handle / Pendulum Bob -->
+                        <g id="cord-knob-group" class="cord-grab-area" transform="translate(258, 292)">
+                            <!-- Subtle Pulse Indicator when Lamp is Off -->
+                            <circle id="knob-pulse-ring" class="handle-pulse" cx="0" cy="12" r="12" fill="none" stroke="var(--theme-primary)" stroke-width="2" />
+                            
+                            <!-- Invisible Larger Hitbox for Easy Touch & Mouse Dragging -->
+                            <circle cx="0" cy="10" r="32" fill="transparent" />
+
+                            <!-- Metallic Cap -->
+                            <rect x="-5" y="-2" width="10" height="6" rx="2" fill="#94a3b8" />
+                            <!-- Wooden/Anodized Pill Pull Handle -->
+                            <path d="M -8 3 L 8 3 L 10 22 C 10 27, -10 27, -10 22 Z" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.8" />
+                            <!-- Illuminated Core Dot on Handle -->
+                            <circle id="knob-indicator" cx="0" cy="14" r="3.5" fill="var(--theme-primary)" />
+                        </g>
+                    </g>
+
+                    <!-- LAMP SHADE & BULB ASSEMBLY -->
+                    <g id="lamp-head">
+                        <!-- Ambient Halo Behind Bulb when ON -->
+                        <circle class="bulb-glow" cx="215" cy="182" r="52" fill="var(--theme-primary)" filter="url(#intense-bulb-blur)" />
+
+                        <!-- Shade Inner Cavity (Dark when Off) -->
+                        <ellipse cx="215" cy="182" rx="73" ry="14" fill="#090d16" stroke="#1e293b" stroke-width="2" />
+
+                        <!-- Shade Inner Cavity (Glowing when On) -->
+                        <ellipse class="bulb-glow" cx="215" cy="182" rx="71" ry="13" fill="url(#inner-shade-glow)" />
+
+                        <!-- Physical Light Bulb -->
+                        <path d="M 197 180 C 197 202, 233 202, 233 180 Z" fill="#334155" opacity="0.6" />
+                        <path class="bulb-glow" d="M 196 179 C 196 205, 234 205, 234 179 Z" fill="#ffffff" />
+                        <path class="bulb-glow" d="M 192 179 C 192 210, 238 210, 238 179 Z" fill="var(--theme-primary)" opacity="0.55" filter="url(#glow-blur)" />
+
+                        <!-- Outer Dome Shade Body -->
+                        <path d="M 195 106 L 235 106 C 258 106, 278 145, 288 182 L 142 182 C 152 145, 172 106, 195 106 Z" 
+                              fill="url(#shade-metal)" stroke="#475569" stroke-width="1.5" stroke-linejoin="round" />
+
+                        <!-- Rim Accent Ring (Lights up subtly with theme color) -->
+                        <path d="M 142 182 Q 215 194 288 182" fill="none" stroke="var(--theme-primary)" stroke-width="2.5" stroke-linecap="round" opacity="0.85" />
+                    </g>
+                </svg>
+
+                <!-- Floating Pull Instruction Pill -->
+                <div id="pull-tooltip" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all duration-300">
+                    <span class="w-2 h-2 rounded-full animate-ping" style="background-color: var(--theme-primary);"></span>
+                    <span id="pull-tooltip-text">Drag down or click the rope to turn on</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Interactive Glassmorphic Login & Sign-Up Form -->
+        <div class="w-full lg:w-7/12 max-w-md mx-auto relative flex items-center justify-center min-h-[540px]">
+            
+            <!-- Sleeping State Message (Shown when Lamp is OFF) -->
+            <div class="dark-room-hint absolute inset-0 flex flex-col items-center justify-center text-center p-8 rounded-3xl border border-slate-800/50 bg-slate-900/20 backdrop-blur-sm">
+                <div class="w-16 h-16 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-center mb-5 shadow-inner">
+                    <i data-lucide="lightbulb-off" class="w-8 h-8 text-slate-500"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-200 mb-2">It's Dark in Here</h2>
+                <p class="text-sm text-slate-400 max-w-xs leading-relaxed mb-6">
+                    Pull the dangling lamp cord on the left to illuminate the room and reveal the authentication portal.
+                </p>
+                <button type="button" onclick="triggerAutoPull()" 
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700 transition-all hover:scale-105 active:scale-95">
+                    <i data-lucide="sparkles" class="w-4 h-4" style="color: var(--theme-primary);"></i>
+                    Pull Lamp Cord Now
+                </button>
+            </div>
+
+            <!-- Illuminated Login & Sign Up Card (Reveals when Lamp is ON) -->
+            <div class="auth-card-wrapper w-full relative z-10">
+                <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                    
+                    <!-- Top Rim Light Reflection Inside Card -->
+                    <div class="absolute -top-24 -left-24 w-56 h-56 rounded-full pointer-events-none blur-3xl opacity-30 transition-colors duration-500"
+                         style="background: var(--theme-primary);"></div>
+
+                    <!-- Header & Mode Switcher Tabs -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-widest" style="color: var(--theme-primary);">
+                                Welcome Back
+                            </span>
+                            <h1 id="form-heading" class="text-2xl font-extrabold text-white tracking-tight mt-0.5">
+                                Sign in to Account
+                            </h1>
+                        </div>
+
+                        <!-- Segmented Tab Pill -->
+                        <div class="grid grid-cols-2 p-1 bg-slate-950/80 border border-slate-800/90 rounded-xl text-xs font-semibold">
+                            <button type="button" id="tab-login" onclick="switchAuthTab('login')"
+                                class="px-4 py-2 rounded-lg transition-all duration-200 text-slate-950 shadow-sm"
+                                style="background-color: var(--theme-primary);">
+                                Login
+                            </button>
+                            <button type="button" id="tab-signup" onclick="switchAuthTab('signup')"
+                                class="px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+                                Sign Up
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Feedback Banner (Validation / Success Toast) -->
+                    <div id="form-feedback" class="hidden mt-4 p-3.5 rounded-xl border text-xs font-medium flex items-center gap-2.5 transition-all">
+                        <i id="feedback-icon" data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+                        <span id="feedback-message"></span>
+                    </div>
+
+                    <!-- Authentication Form -->
+                    <form id="auth-form" onsubmit="handleFormSubmit(event)" class="mt-5 space-y-4" novalidate>
+                        
+                        <!-- Full Name Field (Visible only in Sign Up mode) -->
+                        <div id="signup-name-field" class="hidden space-y-1.5 transition-all duration-300">
+                            <label for="full-name" class="block text-xs font-medium text-slate-300">
+                                Full Name
+                            </label>
+                            <div class="relative">
+                                <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                                <input type="text" id="full-name" placeholder="Elena Rostova" autocomplete="name"
+                                    class="theme-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500">
+                            </div>
+                        </div>
+
+                        <!-- Email Address Field -->
+                        <div class="space-y-1.5">
+                            <label for="email" class="block text-xs font-medium text-slate-300">
+                                Email Address
+                            </label>
+                            <div class="relative">
+                                <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                                <input type="email" id="email" required placeholder="elena@lumina.studio" autocomplete="email"
+                                    class="theme-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500">
+                            </div>
+                        </div>
+
+                        <!-- Password Field with Visibility Toggle -->
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="password" class="block text-xs font-medium text-slate-300">
+                                    Password
+                                </label>
+                                <button type="button" id="forgot-pw-btn" onclick="triggerForgotPassword()"
+                                    class="text-xs font-medium hover:underline transition-colors"
+                                    style="color: var(--theme-primary);">
+                                    Forgot password?
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                                <input type="password" id="password" required placeholder="••••••••••••" autocomplete="current-password"
+                                    oninput="evaluatePasswordStrength(this.value)"
+                                    class="theme-input w-full pl-10 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500">
+                                <button type="button" onclick="togglePasswordVisibility()" aria-label="Toggle Password Visibility"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 rounded-lg transition-colors">
+                                    <i id="pw-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <!-- Live Password Strength Meter (Shown in Sign-Up Mode) -->
+                            <div id="pw-strength-container" class="hidden pt-1.5 space-y-1">
+                                <div class="flex gap-1.5 h-1">
+                                    <div id="pw-bar-1" class="flex-1 rounded-full bg-slate-800 transition-colors duration-300"></div>
+                                    <div id="pw-bar-2" class="flex-1 rounded-full bg-slate-800 transition-colors duration-300"></div>
+                                    <div id="pw-bar-3" class="flex-1 rounded-full bg-slate-800 transition-colors duration-300"></div>
+                                    <div id="pw-bar-4" class="flex-1 rounded-full bg-slate-800 transition-colors duration-300"></div>
+                                </div>
+                                <p id="pw-strength-label" class="text-[11px] text-slate-400">Use 8+ chars with letters & numbers</p>
+                            </div>
+                        </div>
+
+                        <!-- Remember Me / Terms Checkbox -->
+                        <div class="flex items-center justify-between pt-1">
+                            <label class="inline-flex items-center gap-2.5 cursor-pointer text-xs text-slate-300 select-none">
+                                <input type="checkbox" id="remember-check" checked
+                                    class="custom-checkbox w-4 h-4 rounded border-slate-700 bg-slate-900 focus:ring-0 transition-colors cursor-pointer">
+                                <span id="checkbox-label-text">Keep me signed in for 30 days</span>
+                            </label>
+                        </div>
+
+                        <!-- Primary Submit CTA Button -->
+                        <button type="submit" id="submit-btn"
+                            class="theme-btn w-full py-3 px-5 rounded-xl font-bold text-sm text-slate-950 flex items-center justify-center gap-2 mt-2">
+                            <span id="submit-btn-text">Sign In to Workspace</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+
+                    <!-- Social OAuth Divider -->
+                    <div class="relative my-6 flex items-center justify-center">
+                        <div class="border-t border-slate-800 w-full"></div>
+                        <span class="bg-[#0e1422] px-3 text-[11px] uppercase tracking-wider text-slate-400 whitespace-nowrap">
+                            Or continue with
+                        </span>
+                        <div class="border-t border-slate-800 w-full"></div>
+                    </div>
+
+                    <!-- Social Login Buttons -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" onclick="handleSocialAuth('Google')"
+                            class="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-xs font-semibold text-slate-200 transition-all hover:-translate-y-0.5">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24">
+                                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.8C6.2 7.2 8.9 5 12 5z"/>
+                                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/>
+                                <path fill="#FBBC05" d="M5.3 14.8c-.2-.8-.4-1.6-.4-2.5s.2-1.7.4-2.5L1.6 7C.6 9 0 11.2 0 13.5s.6 4.5 1.6 6.5l3.7-2.9z"/>
+                                <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5l-3.7 2.8C3.5 21.4 7.4 24 12 24z"/>
+                            </svg>
+                            Google
+                        </button>
+                        <button type="button" onclick="handleSocialAuth('GitHub')"
+                            class="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-xs font-semibold text-slate-200 transition-all hover:-translate-y-0.5">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                            </svg>
+                            GitHub
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Bottom Subtle Shortcut Bar -->
+    <footer class="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+        <div class="flex items-center gap-2">
+            <span>Tip: You can also press</span>
+            <kbd class="px-2 py-0.5 bg-slate-900 border border-slate-800 rounded text-slate-300 font-mono text-[11px]">Space</kbd>
+            <span>when not typing to toggle the lamp switch.</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="lighting-intensity-readout" class="text-slate-400">Luminance: 0% (Standby)</span>
+        </div>
+    </footer>
+
+    <!-- Application Logic: Spring Physics, Web Audio Synthesizer, Theme Manager & Auth UI -->
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        /* ==========================================================================
+           1. CURATED 5 COLOR THEMES CONFIGURATION
+           ========================================================================== */
+        const THEMES = [
+            {
+                name: 'Amber Gold',
+                primary: '#f59e0b',
+                secondary: '#fbbf24',
+                rgb: '245, 158, 11'
+            },
+            {
+                name: 'Cyber Neon Cyan',
+                primary: '#06b6d4',
+                secondary: '#22d3ee',
+                rgb: '6, 182, 212'
+            },
+            {
+                name: 'Royal Amethyst',
+                primary: '#a855f7',
+                secondary: '#c084fc',
+                rgb: '168, 85, 247'
+            },
+            {
+                name: 'Emerald Mint',
+                primary: '#10b981',
+                secondary: '#34d399',
+                rgb: '16, 185, 129'
+            },
+            {
+                name: 'Rose Sunset',
+                primary: '#f43f5e',
+                secondary: '#fb7185',
+                rgb: '244, 63, 94'
+            }
+        ];
+
+        let currentThemeIndex = 0;
+        let isLampOn = false;
+        let currentAuthMode = 'login'; // 'login' | 'signup'
+
+        function selectTheme(index) {
+            currentThemeIndex = index;
+            const theme = THEMES[index];
+            const root = document.documentElement;
+
+            // Update CSS Custom Properties
+            root.style.setProperty('--theme-primary', theme.primary);
+            root.style.setProperty('--theme-secondary', theme.secondary);
+            root.style.setProperty('--theme-rgb', theme.rgb);
+
+            // Update SVG Linear Gradient Stops dynamically
+            document.getElementById('beam-stop-1').setAttribute('stop-color', theme.primary);
+            document.getElementById('beam-stop-2').setAttribute('stop-color', theme.primary);
+            document.getElementById(' beam-stop-3')?.setAttribute('stop-color', theme.primary);
+            document.getElementById('spill-stop-1').setAttribute('stop-color', theme.primary);
+            document.getElementById('spill-stop-2').setAttribute('stop-color', theme.primary);
+            document.getElementById('shade-stop-2').setAttribute('stop-color', theme.primary);
+
+            // Update Theme Label & Swatch Active Ring
+            document.getElementById('theme-name-label').textContent = theme.name;
+            document.querySelectorAll('.theme-swatch').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === index);
+            });
+
+            // Update Active Auth Tab Color
+            updateAuthTabColors();
+
+            // Play subtle harmonic chime when switching theme
+            playThemeSelectSound(index);
+        }
+
+        /* ==========================================================================
+           2. WEB AUDIO API MECHANICAL SWITCH CLICK SYNTHESIZER (Zero External Assets)
+           ========================================================================== */
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSwitchClickSound(turningOn) {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+
+                const now = ctx.currentTime;
+
+                // Part 1: Crisp mechanical pull-chain latch click
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(turningOn ? 190 : 150, now);
+                osc.frequency.exponentialRampToValueAtTime(turningOn ? 620 : 95, now + 0.045);
+
+                gain.gain.setValueAtTime(0.28, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.06);
+
+                // Part 2: Warm subtle filament hum / chime on turn-on
+                if (turningOn) {
+                    const glowOsc = ctx.createOscillator();
+                    const glowGain = ctx.createGain();
+                    glowOsc.type = 'sine';
+                    glowOsc.frequency.setValueAtTime(528, now + 0.03);
+                    glowOsc.frequency.exponentialRampToValueAtTime(660, now + 0.22);
+
+                    glowGain.gain.setValueAtTime(0.06, now + 0.03);
+                    glowGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                    glowOsc.connect(glowGain);
+                    glowGain.connect(ctx.destination);
+                    glowOsc.start(now + 0.03);
+                    glowOsc.stop(now + 0.26);
+                }
+            } catch (e) {
+                // Ignore audio errors if blocked by browser autoplay policy
+            }
+        }
+
+        function playThemeSelectSound(index) {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const freqs = [440, 493.88, 554.37, 587.33, 659.25];
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freqs[index % freqs.length], now);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.13);
+            } catch (e) {}
+        }
+
+        /* ==========================================================================
+           3. INTERACTIVE SPRING PHYSICS ENGINE FOR THE DANGLING PULL CORD
+           ========================================================================== */
+        const svgElement = document.getElementById('lamp-svg');
+        const cordLine = document.getElementById('cord-line');
+        const cordCore = document.getElementById('cord-core');
+        const cordKnobGroup = document.getElementById('cord-knob-group');
+        const knobPulseRing = document.getElementById('knob-pulse-ring');
+
+        // Anchor point at the lamp socket
+        const ANCHOR_X = 258;
+        const ANCHOR_Y = 176;
+        const REST_X = 258;
+        const REST_Y = 292;
+        const PULL_THRESHOLD = 38; // Vertical pull distance needed to trigger toggle
+
+        // Physics state variables
+        let knobX = REST_X;
+        let knobY = REST_Y;
+        let velX = 0;
+        let velY = 0;
+        let isDragging = false;
+        let dragStartTime = 0;
+        let maxPullDeltaY = 0;
+        let thresholdCrossedDuringDrag = false;
+
+        // Convert client mouse/touch coordinates to SVG viewBox space
+        function clientToSvgCoords(clientX, clientY) {
+            const pt = svgElement.createSVGPoint();
+            pt.x = clientX;
+            pt.y = clientY;
+            const ctm = svgElement.getScreenCTM();
+            if (!ctm) return { x: REST_X, y: REST_Y };
+            return pt.matrixTransform(ctm.inverse());
+        }
+
+        // Start dragging the rope
+        function onPointerDown(e) {
+            e.preventDefault();
+            isDragging = true;
+            dragStartTime = performance.now();
+            maxPullDeltaY = 0;
+            thresholdCrossedDuringDrag = false;
+            cordKnobGroup.setPointerCapture?.(e.pointerId);
+        }
+
+        // Move the rope with elastic resistance
+        function onPointerMove(e) {
+            if (!isDragging) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const svgPt = clientToSvgCoords(clientX, clientY);
+
+            // Apply horizontal sway limit and vertical elastic extension
+            const dx = (svgPt.x - REST_X) * 0.45;
+            const dy = Math.max(-15, (svgPt.y - REST_Y) * 0.82);
+
+            knobX = REST_X + Math.max(-55, Math.min(55, dx));
+            knobY = REST_Y + Math.min(95, dy);
+
+            const currentPullY = knobY - REST_Y;
+            if (currentPullY > maxPullDeltaY) {
+                maxPullDeltaY = currentPullY;
+            }
+
+            // Tactile visual cue as user crosses the pull switch click threshold
+            if (currentPullY >= PULL_THRESHOLD && !thresholdCrossedDuringDrag) {
+                thresholdCrossedDuringDrag = true;
+                playSwitchClickSound(!isLampOn);
+            }
+        }
+
+        // Release the rope & snap back with spring physics
+        function onPointerUp(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            const pressDuration = performance.now() - dragStartTime;
+
+            // Toggle if pulled past threshold OR if user clicked/tapped the handle directly
+            if (maxPullDeltaY >= PULL_THRESHOLD) {
+                toggleLampState(true); // Sound already played on threshold cross
+            } else if (pressDuration < 260 && maxPullDeltaY < 12) {
+                // Quick tap/click triggers an animated downward pull
+                velY = 18;
+                velX = (Math.random() - 0.5) * 6;
+                toggleLampState(false);
+            }
+        }
+
+        // Attach pointer and touch listeners to the rope handle
+        cordKnobGroup.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+
+        // Programmatic pull animation (for button or Spacebar shortcut)
+        function triggerAutoPull() {
+            velY = 21;
+            velX = 4;
+            toggleLampState(false);
+        }
+
+        // 60FPS Spring Physics Animation Loop
+        function updateCordPhysics() {
+            if (!isDragging) {
+                const springStiffness = 0.16;
+                const damping = 0.82;
+
+                const forceX = (REST_X - knobX) * springStiffness;
+                const forceY = (REST_Y - knobY) * springStiffness;
+
+                velX = (velX + forceX) * damping;
+                velY = (velY + forceY) * damping;
+
+                knobX += velX;
+                knobY += velY;
+            }
+
+            // Compute quadratic Bezier control point for natural rope curvature
+            const midX = (ANCHOR_X + knobX) / 2 + (knobX - REST_X) * 0.25;
+            const midY = (ANCHOR_Y + knobY) / 2 + Math.abs(knobX - REST_X) * 0.12;
+
+            const pathData = `M ${ANCHOR_X} ${ANCHOR_Y} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${knobX.toFixed(1)} ${knobY.toFixed(1)}`;
+            cordLine.setAttribute('d', pathData);
+            cordCore.setAttribute('d', pathData);
+            cordKnobGroup.setAttribute('transform', `translate(${knobX.toFixed(1)}, ${knobY.toFixed(1)})`);
+
+            requestAnimationFrame(updateCordPhysics);
+        }
+
+        requestAnimationFrame(updateCordPhysics);
+
+        /* ==========================================================================
+           4. LAMP ON / OFF STATE CONTROLLER
+           ========================================================================== */
+        function toggleLampState(soundAlreadyPlayed = false) {
+            isLampOn = !isLampOn;
+
+            if (!soundAlreadyPlayed) {
+                playSwitchClickSound(isLampOn);
+            }
+
+            const root = document.documentElement;
+            const body = document.body;
+            const statusBadge = document.getElementById('status-badge');
+            const tooltipText = document.getElementById('pull-tooltip-text');
+            const intensityReadout = document.getElementById('lighting-intensity-readout');
+
+            // Update CSS state variable & body class
+            root.style.setProperty('--lamp-on', isLampOn ? '1' : '0');
+            body.classList.toggle('lamp-is-on', isLampOn);
+
+            // Toggle pulse ring on knob (pulse when off so user notices it)
+            knobPulseRing.style.display = isLampOn ? 'none' : 'block';
+
+            if (isLampOn) {
+                statusBadge.textContent = 'Lamp On';
+                statusBadge.style.borderColor = 'var(--theme-primary)';
+                statusBadge.style.color = '#ffffff';
+                statusBadge.style.backgroundColor = 'rgba(var(--theme-rgb), 0.2)';
+                tooltipText.textContent = 'Pull rope again to turn off lamp & hide form';
+                intensityReadout.textContent = `Luminance: 100% (${THEMES[currentThemeIndex].name})`;
+            } else {
+                statusBadge.textContent = 'Lamp Off';
+                statusBadge.style.borderColor = '';
+                statusBadge.style.color = '';
+                statusBadge.style.backgroundColor = '';
+                tooltipText.textContent = 'Drag down or click the rope to turn on';
+                intensityReadout.textContent = 'Luminance: 0% (Standby)';
+            }
+        }
+
+        // Spacebar shortcut to toggle lamp when not focused inside an input field
+        window.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement?.tagName;
+            if (e.code === 'Space' && activeTag !== 'INPUT' && activeTag !== 'BUTTON') {
+                e.preventDefault();
+                triggerAutoPull();
+            }
+        });
+
+        /* ==========================================================================
+           5. AUTHENTICATION FORM UI LOGIC (LOGIN / SIGN UP / VALIDATION)
+           ========================================================================== */
+        function switchAuthTab(mode) {
+            currentAuthMode = mode;
+            const heading = document.getElementById('form-heading');
+            const nameField = document.getElementById('signup-name-field');
+            const forgotBtn = document.getElementById('forgot-pw-btn');
+            const pwStrength = document.getElementById('pw-strength-container');
+            const checkboxLabel = document.getElementById('checkbox-label-text');
+            const submitBtnText = document.getElementById('submit-btn-text');
+            const feedback = document.getElementById('form-feedback');
+
+            feedback.classList.add('hidden');
+            updateAuthTabColors();
+
+            if (mode === 'signup') {
+                heading.textContent = 'Create Your Account';
+                nameField.classList.remove('hidden');
+                forgotBtn.classList.add('hidden');
+                pwStrength.classList.remove('hidden');
+                checkboxLabel.textContent = 'I agree to the Terms & Privacy Policy';
+                submitBtnText.textContent = 'Create Lumina Account';
+                evaluatePasswordStrength(document.getElementById('password').value);
+            } else {
+                heading.textContent = 'Sign in to Account';
+                nameField.classList.add('hidden');
+                forgotBtn.classList.remove('hidden');
+                pwStrength.classList.add('hidden');
+                checkboxLabel.textContent = 'Keep me signed in for 30 days';
+                submitBtnText.textContent = 'Sign In to Workspace';
+            }
+        }
+
+        function updateAuthTabColors() {
+            const loginTab = document.getElementById('tab-login');
+            const signupTab = document.getElementById('tab-signup');
+            const themeColor = THEMES[currentThemeIndex].primary;
+
+            if (currentAuthMode === 'login') {
+                loginTab.style.backgroundColor = themeColor;
+                loginTab.className = 'px-4 py-2 rounded-lg transition-all duration-200 text-slate-950 font-bold shadow-sm';
+                signupTab.style.backgroundColor = 'transparent';
+                signupTab.className = 'px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white';
+            } else {
+                signupTab.style.backgroundColor = themeColor;
+                signupTab.className = 'px-4 py-2 rounded-lg transition-all duration-200 text-slate-950 font-bold shadow-sm';
+                loginTab.style.backgroundColor = 'transparent';
+                loginTab.className = 'px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const pwInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('pw-eye-icon');
+            const isHidden = pwInput.type === 'password';
+            pwInput.type = isHidden ? 'text' : 'password';
+            eyeIcon.setAttribute('data-lucide', isHidden ? 'eye-off' : 'eye');
+            lucide.createIcons();
+        }
+
+        function evaluatePasswordStrength(val) {
+            if (currentAuthMode !== 'signup') return;
+            let score = 0;
+            if (val.length >= 6) score++;
+            if (val.length >= 10) score++;
+            if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+
+            const bars = [
+                document.getElementById('pw-bar-1'),
+                document.getElementById('pw-bar-2'),
+                document.getElementById('pw-bar-3'),
+                document.getElementById('pw-bar-4')
+            ];
+            const labels = ['Enter a password', 'Weak password', 'Fair password', 'Good password', 'Strong password'];
+            const colors = ['#1e293b', '#ef4444', '#f59e0b', '#3b82f6', '#10b981'];
+
+            bars.forEach((bar, idx) => {
+                bar.style.backgroundColor = idx < score ? colors[score] : '#1e293b';
+            });
+            document.getElementById('pw-strength-label').textContent = labels[score];
+        }
+
+        function showFeedbackBanner(message, isError = false) {
+            const banner = document.getElementById('form-feedback');
+            const msgEl = document.getElementById('feedback-message');
+            const iconEl = document.getElementById('feedback-icon');
+
+            banner.classList.remove('hidden');
+            msgEl.textContent = message;
+
+            if (isError) {
+                banner.className = 'mt-4 p-3.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-200 text-xs font-medium flex items-center gap-2.5';
+                iconEl.setAttribute('data-lucide', 'alert-circle');
+            } else {
+                banner.className = 'mt-4 p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs font-medium flex items-center gap-2.5';
+                iconEl.setAttribute('data-lucide', 'check-circle-2');
+            }
+            lucide.createIcons();
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('full-name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (currentAuthMode === 'signup' && fullName.length < 2) {
+                showFeedbackBanner('Please enter your full name to create an account.', true);
+                return;
+            }
+
+            if (!email || !email.includes('@')) {
+                showFeedbackBanner('Please enter a valid email address.', true);
+                return;
+            }
+
+            if (password.length < 6) {
+                showFeedbackBanner('Password must be at least 6 characters long.', true);
+                return;
+            }
+
+            if (currentAuthMode === 'login') {
+                showFeedbackBanner(`Welcome back! Signed in as ${email} under ${THEMES[currentThemeIndex].name} ambiance.`);
+            } else {
+                showFeedbackBanner(`Account created for ${fullName}! Welcome to Lumina Studio.`);
+            }
+        }
+
+        function triggerForgotPassword() {
+            const email = document.getElementById('email').value.trim();
+            if (!email || !email.includes('@')) {
+                showFeedbackBanner('Enter your email address above first to receive a reset link.', true);
+            } else {
+                showFeedbackBanner(`Password recovery instructions sent to ${email}.`);
+            }
+        }
+
+        function handleSocialAuth(provider) {
+            showFeedbackBanner(`Connecting securely with ${provider} OAuth...`);
+        }
+    </script>
+</body>
+</html>
